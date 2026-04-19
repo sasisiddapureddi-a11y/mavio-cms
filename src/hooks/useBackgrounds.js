@@ -27,34 +27,47 @@ export function useUploadBackground() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ file, name, categoryId }) => {
-      const ext = file.name.split('.').pop()
+      if (!file) throw new Error('Image file is required')
+      if (!name?.trim()) throw new Error('Background name is required')
+
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('Background image must be smaller than 10MB')
+      }
+
+      const ext = file.name ? file.name.split('.').pop().toLowerCase() : 'jpg'
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('background-templates')
         .upload(fileName, file, { upsert: false })
 
-      if (uploadError) throw uploadError
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!uploadData?.path) throw new Error('Upload succeeded but no path returned')
 
       const { data, error } = await supabase
         .from('background_templates')
         .insert([{
-          name,
+          name: name.trim(),
           image_url: uploadData.path,
-          category_id: categoryId || null,
+          category_id: categoryId && categoryId !== 'all' ? categoryId : null,
         }])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // Clean up uploaded file if DB insert fails
+        await supabase.storage.from('background-templates').remove([uploadData.path]).catch(() => {})
+        throw new Error(`Failed to save background: ${error.message}`)
+      }
+
       return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backgrounds'] })
       toast.success('Background uploaded successfully')
     },
-    onError: () => {
-      toast.error('Failed to upload background')
+    onError: (err) => {
+      toast.error(err.message || 'Failed to upload background')
     },
   })
 }
@@ -63,21 +76,25 @@ export function useDeleteBackground() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, imagePath }) => {
-      if (imagePath) {
-        await supabase.storage.from('background-templates').remove([imagePath])
+      if (imagePath && !imagePath.startsWith('http')) {
+        await supabase.storage.from('background-templates').remove([imagePath]).catch((err) => {
+          console.warn('[useDeleteBackground] Storage deletion failed:', err.message)
+        })
       }
+
       const { error } = await supabase
         .from('background_templates')
         .delete()
         .eq('id', id)
-      if (error) throw error
+
+      if (error) throw new Error(`Failed to delete background: ${error.message}`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backgrounds'] })
       toast.success('Background deleted')
     },
-    onError: () => {
-      toast.error('Failed to delete background')
+    onError: (err) => {
+      toast.error(err.message || 'Failed to delete background')
     },
   })
 }

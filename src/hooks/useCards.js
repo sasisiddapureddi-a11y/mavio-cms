@@ -69,106 +69,51 @@ export function useCreateCard() {
     mutationFn: async ({ file, ...cardData }) => {
       if (!file) throw new Error('Image file is required')
 
-      const MAX_FILE_SIZE = 5 * 1024 * 1024
-      if (file.size > MAX_FILE_SIZE) {
+      if (file.size > 5 * 1024 * 1024) {
         throw new Error('Image must be smaller than 5MB')
       }
 
-      // Check bucket exists
-      try {
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
-        if (bucketsError) {
-          console.error('[useCreateCard] Failed to list buckets:', bucketsError.message)
-          throw new Error('Failed to access storage buckets')
-        }
-
-        const bucketExists = buckets?.some(b => b.name === 'content-cards')
-        if (!bucketExists) {
-          try {
-            await supabase.storage.createBucket('content-cards', { public: true })
-            console.log('[useCreateCard] Created content-cards bucket')
-          } catch (err) {
-            console.error('[useCreateCard] Failed to create bucket:', err.message)
-            throw new Error('Storage bucket not found or inaccessible')
-          }
-        }
-      } catch (err) {
-        if (err.message.includes('Storage bucket')) throw err
-        console.error('[useCreateCard] Bucket check failed:', err.message)
-        throw new Error('Storage access failed. Please check Supabase configuration.')
-      }
-
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        throw new Error('Authentication failed. Please log in again.')
-      }
+      if (authError || !user) throw new Error('Authentication failed. Please log in again.')
 
-      const ext = file.name ? file.name.split('.').pop() : 'jpg'
+      const ext = file.name ? file.name.split('.').pop().toLowerCase() : 'jpg'
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-      try {
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('content-cards')
-          .upload(fileName, file, { upsert: false })
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('content-cards')
+        .upload(fileName, file, { upsert: false })
 
-        if (uploadError) {
-          console.error('[useCreateCard] Upload failed:', uploadError.message)
-          throw new Error(`Upload failed: ${uploadError.message}`)
-        }
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`)
+      if (!uploadData?.path) throw new Error('Upload succeeded but no path returned')
 
-        if (!uploadData || !uploadData.path) {
-          throw new Error('Upload succeeded but no path returned')
-        }
-
-        console.log('[useCreateCard] Uploaded to:', uploadData.path)
-
-        // Strip content_text fields if they don't exist in DB yet (graceful degradation)
-        const insertData = {
-          category_id: cardData.category_id ?? null,
-          language_id: cardData.language_id ?? null,
-          festival_id: cardData.festival_id ?? null,
-          occasions: cardData.occasions ?? [],
-          tags: cardData.tags ?? [],
-          priority: cardData.priority ?? 5,
-          status: cardData.status ?? 'draft',
-          scheduled_at: cardData.scheduled_at ?? null,
-          image_url: uploadData.path,
-          created_by: user.id,
-        }
-
-        if (cardData.content_text !== undefined) {
-          insertData.content_text = cardData.content_text
-        }
-        if (cardData.content_text_language !== undefined) {
-          insertData.content_text_language = cardData.content_text_language
-        }
-
-        const { data, error } = await supabase
-          .from('content_cards')
-          .insert([insertData])
-          .select()
-          .single()
-
-        if (error) {
-          console.error('[useCreateCard] Database insert failed:', error.message)
-          try {
-            await supabase.storage.from('content-cards').remove([uploadData.path])
-          } catch (cleanupErr) {
-            console.warn('[useCreateCard] Failed to clean up uploaded file:', cleanupErr.message)
-          }
-          throw new Error(`Failed to save card: ${error.message}`)
-        }
-
-        if (!data) {
-          throw new Error('Card created but no data returned')
-        }
-
-        console.log('[useCreateCard] Card created:', data.id)
-        return data
-      } catch (err) {
-        console.error('[useCreateCard] Mutation failed:', err.message)
-        throw err
+      const insertData = {
+        category_id: cardData.category_id ?? null,
+        language_id: cardData.language_id ?? null,
+        festival_id: cardData.festival_id ?? null,
+        occasions: cardData.occasions ?? [],
+        tags: cardData.tags ?? [],
+        priority: cardData.priority ?? 5,
+        status: cardData.status ?? 'draft',
+        scheduled_at: cardData.scheduled_at ?? null,
+        image_url: uploadData.path,
+        created_by: user.id,
       }
+
+      if (cardData.content_text !== undefined) insertData.content_text = cardData.content_text
+      if (cardData.content_text_language !== undefined) insertData.content_text_language = cardData.content_text_language
+
+      const { data, error } = await supabase
+        .from('content_cards')
+        .insert([insertData])
+        .select()
+        .single()
+
+      if (error) {
+        await supabase.storage.from('content-cards').remove([uploadData.path]).catch(() => {})
+        throw new Error(`Failed to save card: ${error.message}`)
+      }
+
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cards'] })
