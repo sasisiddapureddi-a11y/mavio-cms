@@ -41,7 +41,7 @@ export default function Festivals() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5 pb-20 md:pb-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-[#1A1612]" style={{ fontFamily: "'Instrument Serif', serif" }}>
@@ -63,7 +63,7 @@ export default function Festivals() {
       {showForm && (
         <div className="bg-white border border-[#E8E2D9] rounded-2xl p-5">
           <h2 className="font-semibold text-[#1A1612] mb-4">New Festival</h2>
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-[#6B6358] mb-1 uppercase tracking-wider">
                 Name <span className="text-red-500">*</span>
@@ -138,7 +138,7 @@ export default function Festivals() {
 
       {/* Festival grid */}
       {isLoading ? (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-40 bg-[#E8E2D9] rounded-2xl animate-pulse" />
           ))}
@@ -150,7 +150,7 @@ export default function Festivals() {
           <p className="text-sm text-[#A89E93] mt-1">Add your first festival to start tracking</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {festivals.map((festival) => {
             const days = daysUntil(festival.festival_date)
             const isUpcoming = days >= 0 && days <= 60
@@ -197,7 +197,7 @@ export default function Festivals() {
                 </p>
 
                 <Link
-                  to={`/cards/new?festival=${festival.id}`}
+                  to={`/cards/new?festival_id=${festival.id}&festival_name=${encodeURIComponent(festival.name)}`}
                   className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl border text-xs font-medium transition-all border-[#FF6B00]/30 text-[#FF6B00] hover:bg-[#FFF0E6]"
                 >
                   <Plus size={13} />

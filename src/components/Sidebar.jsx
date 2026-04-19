@@ -24,7 +24,7 @@ export default function Sidebar() {
     : '?'
 
   return (
-    <div className="flex flex-col h-full w-60 bg-[#1A1612] text-white shrink-0">
+    <div className="hidden md:flex flex-col h-full w-60 bg-[#1A1612] text-white shrink-0">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6 border-b border-white/10">
         <div

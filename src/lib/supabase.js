@@ -10,19 +10,19 @@ const storageBase = `${supabaseUrl}/storage/v1`
 export function getCardImageUrl(path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/render/image/public/content-cards/${path}?width=1080&height=1080&quality=80`
+  return `${storageBase}/render/image/public/content-cards/${path}?width=1080&height=1920&quality=85`
 }
 
 export function getCardThumbUrl(path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/render/image/public/content-cards/${path}?width=200&height=200&quality=60`
+  return `${storageBase}/render/image/public/content-cards/${path}?width=405&height=720&quality=70`
 }
 
 export function getBgUrl(path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/render/image/public/background-templates/${path}?width=600&height=600&quality=80`
+  return `${storageBase}/render/image/public/background-templates/${path}?width=405&height=720&quality=80`
 }
 
 export function getPublicUrl(bucket, path) {

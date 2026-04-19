@@ -12,7 +12,7 @@ async function fetchCmsUser(userId) {
     // 500 = table missing or RLS misconfigured; PGRST116 = no rows found
     if (error.code === 'PGRST116') return null          // user not in cms_users
     console.error('[authStore] cms_users query failed:', error.message, error.code)
-    throw error                                          // surface DB/config errors
+    throw new Error('Access denied. Your account is not registered as a CMS user. Contact your administrator.')
   }
   return data
 }

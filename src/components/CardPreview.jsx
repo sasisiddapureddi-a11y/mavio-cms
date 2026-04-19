@@ -1,7 +1,9 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react'
 
-const CANVAS_SIZE = 1080
-const PREVIEW_SIZE = 400
+const CANVAS_W = 1080
+const CANVAS_H = 1920
+const PREVIEW_W = 270
+const PREVIEW_H = 480
 
 const CardPreview = forwardRef(function CardPreview(
   {
@@ -21,18 +23,18 @@ const CardPreview = forwardRef(function CardPreview(
   const drawCanvas = async (canvas) => {
     if (!canvas || !backgroundUrl) return
     const ctx = canvas.getContext('2d')
-    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
 
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, CANVAS_SIZE, CANVAS_SIZE)
+        ctx.drawImage(img, 0, 0, CANVAS_W, CANVAS_H)
         resolve()
       }
       img.onerror = () => {
         ctx.fillStyle = '#1A1612'
-        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
         resolve()
       }
       img.src = backgroundUrl
@@ -40,14 +42,14 @@ const CardPreview = forwardRef(function CardPreview(
 
     if (overlayText) {
       const weight = bold ? 'bold' : 'normal'
-      const px = Math.round(fontSize * (CANVAS_SIZE / PREVIEW_SIZE))
+      const px = Math.round(fontSize * (CANVAS_W / PREVIEW_W))
       ctx.font = `${weight} ${px}px Geist, sans-serif`
       ctx.fillStyle = fontColor
       ctx.textAlign = 'center'
 
       if (shadow) {
         ctx.shadowColor = 'rgba(0,0,0,0.7)'
-        ctx.shadowBlur = 12
+        ctx.shadowBlur = 16
         ctx.shadowOffsetX = 2
         ctx.shadowOffsetY = 2
       } else {
@@ -55,7 +57,7 @@ const CardPreview = forwardRef(function CardPreview(
         ctx.shadowBlur = 0
       }
 
-      const maxWidth = CANVAS_SIZE * 0.8
+      const maxWidth = CANVAS_W * 0.85
       const lineHeight = px * 1.4
       const words = overlayText.split(' ')
       const lines = []
@@ -75,15 +77,15 @@ const CardPreview = forwardRef(function CardPreview(
       const totalHeight = lines.length * lineHeight
       let startY
       if (textPosition === 'top') {
-        startY = px + 80
+        startY = px + 120
       } else if (textPosition === 'bottom') {
-        startY = CANVAS_SIZE - totalHeight - 80
+        startY = CANVAS_H - totalHeight - 120
       } else {
-        startY = (CANVAS_SIZE - totalHeight) / 2 + px / 2
+        startY = (CANVAS_H - totalHeight) / 2 + px / 2
       }
 
       for (let i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], CANVAS_SIZE / 2, startY + i * lineHeight, maxWidth)
+        ctx.fillText(lines[i], CANVAS_W / 2, startY + i * lineHeight, maxWidth)
       }
     }
   }
@@ -100,8 +102,8 @@ const CardPreview = forwardRef(function CardPreview(
         setRendering(true)
         try {
           const canvas = document.createElement('canvas')
-          canvas.width = CANVAS_SIZE
-          canvas.height = CANVAS_SIZE
+          canvas.width = CANVAS_W
+          canvas.height = CANVAS_H
           await drawCanvas(canvas)
           canvas.toBlob(
             (blob) => {
@@ -123,13 +125,13 @@ const CardPreview = forwardRef(function CardPreview(
     <div className="flex flex-col items-center gap-2">
       <div
         className="relative rounded-xl overflow-hidden border border-[#E8E2D9] shadow-md bg-[#1A1612]"
-        style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
+        style={{ width: PREVIEW_W, height: PREVIEW_H }}
       >
         <canvas
           ref={canvasRef}
-          width={CANVAS_SIZE}
-          height={CANVAS_SIZE}
-          style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE, display: 'block' }}
+          width={CANVAS_W}
+          height={CANVAS_H}
+          style={{ width: PREVIEW_W, height: PREVIEW_H, display: 'block' }}
         />
         {rendering && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -137,7 +139,7 @@ const CardPreview = forwardRef(function CardPreview(
           </div>
         )}
       </div>
-      <p className="text-xs text-[#A89E93]">Live preview (400×400) — final export 1080×1080</p>
+      <p className="text-xs text-[#A89E93]">Live preview — final export 1080×1920</p>
     </div>
   )
 })

@@ -11,7 +11,7 @@ export function useBackgrounds(categoryId) {
         .select('*, category:categories(id, name, emoji, color_hex)')
         .order('created_at', { ascending: false })
 
-      if (categoryId) {
+      if (categoryId && categoryId !== 'all') {
         query = query.eq('category_id', categoryId)
       }
 

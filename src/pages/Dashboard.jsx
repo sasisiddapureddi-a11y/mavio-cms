@@ -65,7 +65,7 @@ export default function Dashboard() {
         .from('content_cards')
         .select('*, category:categories(name, emoji), language:languages(name)')
         .order('created_at', { ascending: false })
-        .limit(6)
+        .limit(10)
       return data || []
     },
   })
@@ -75,7 +75,7 @@ export default function Dashboard() {
     : null
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5 pb-20 md:pb-6">
       <div>
         <h1 className="text-2xl font-semibold text-[#1A1612]" style={{ fontFamily: "'Instrument Serif', serif" }}>
           Dashboard
@@ -104,7 +104,7 @@ export default function Dashboard() {
             <p className="text-white/80 text-sm">{upcomingFestival.telugu_name} — start creating content now</p>
           </div>
           <Link
-            to={`/cards/new?festival=${upcomingFestival.id}`}
+            to={`/cards/new?festival_id=${upcomingFestival.id}&festival_name=${encodeURIComponent(upcomingFestival.name)}`}
             className="px-4 py-2 bg-white text-[#FF6B00] font-semibold text-sm rounded-xl shrink-0 hover:bg-white/90 transition-all"
           >
             Create Cards

@@ -46,6 +46,20 @@ serve(async (req) => {
       )
     }
 
+    // Validate if the card exists
+    const { data: card, error: cardError } = await supabase
+      .from('content_cards')
+      .select('id')
+      .eq('id', card_id)
+      .single()
+
+    if (cardError || !card) {
+      return new Response(
+        JSON.stringify({ error: 'Card not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // ── Unlike: remove the like row + decrement counter, nothing else ──
     if (action === "unlike") {
       await supabase

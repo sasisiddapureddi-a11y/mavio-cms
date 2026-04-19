@@ -2,18 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
+const CARD_SELECT = `
+  *,
+  content_text,
+  content_text_language,
+  category:categories(id, name, emoji, color_hex),
+  language:languages(id, name, code),
+  festival:festivals(id, name, festival_date)
+`
+
 export function useCards(filters = {}) {
   return useQuery({
     queryKey: ['cards', filters],
     queryFn: async () => {
       let query = supabase
         .from('content_cards')
-        .select(`
-          *,
-          category:categories(id, name, emoji, color_hex),
-          language:languages(id, name, code),
-          festival:festivals(id, name, festival_date)
-        `)
+        .select(CARD_SELECT)
         .order('created_at', { ascending: false })
 
       if (filters.status && filters.status !== 'all') {
@@ -24,6 +28,15 @@ export function useCards(filters = {}) {
       }
       if (filters.language_id) {
         query = query.eq('language_id', filters.language_id)
+      }
+      if (filters.search) {
+        query = query.ilike('content_text', `%${filters.search}%`)
+      }
+      if (filters.limit) {
+        query = query.limit(filters.limit)
+      }
+      if (filters.offset) {
+        query = query.range(filters.offset, filters.offset + (filters.limit || 20) - 1)
       }
 
       const { data, error } = await query
@@ -40,12 +53,7 @@ export function useCard(id) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('content_cards')
-        .select(`
-          *,
-          category:categories(id, name, emoji, color_hex),
-          language:languages(id, name, code),
-          festival:festivals(id, name, festival_date)
-        `)
+        .select(CARD_SELECT)
         .eq('id', id)
         .single()
       if (error) throw error
@@ -60,6 +68,12 @@ export function useCreateCard() {
   return useMutation({
     mutationFn: async ({ file, ...cardData }) => {
       if (!file) throw new Error('Image file is required')
+
+      const { data: buckets } = await supabase.storage.listBuckets()
+      const bucketExists = buckets?.some(b => b.name === 'content-cards')
+      if (!bucketExists) {
+        await supabase.storage.createBucket('content-cards', { public: true })
+      }
 
       const userId = (await supabase.auth.getUser()).data?.user?.id
       const ext = file.name ? file.name.split('.').pop() : 'jpg'
@@ -172,14 +186,23 @@ export function usePublishCard() {
       if (error) throw error
       return data
     },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['cards'] })
+      const prev = queryClient.getQueryData(['cards'])
+      queryClient.setQueriesData({ queryKey: ['cards'] }, (old) =>
+        old?.map?.((c) => c.id === id ? { ...c, status: 'published' } : c) ?? old
+      )
+      return { prev }
+    },
+    onError: (_, __, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['cards'], ctx.prev)
+      toast.error('Failed to publish card')
+    },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['card', id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Card published')
-    },
-    onError: () => {
-      toast.error('Failed to publish card')
     },
   })
 }
@@ -197,14 +220,23 @@ export function useUnpublishCard() {
       if (error) throw error
       return data
     },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['cards'] })
+      const prev = queryClient.getQueryData(['cards'])
+      queryClient.setQueriesData({ queryKey: ['cards'] }, (old) =>
+        old?.map?.((c) => c.id === id ? { ...c, status: 'draft' } : c) ?? old
+      )
+      return { prev }
+    },
+    onError: (_, __, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(['cards'], ctx.prev)
+      toast.error('Failed to unpublish card')
+    },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['cards'] })
       queryClient.invalidateQueries({ queryKey: ['card', id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Card unpublished')
-    },
-    onError: () => {
-      toast.error('Failed to unpublish card')
     },
   })
 }

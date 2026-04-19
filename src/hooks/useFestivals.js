@@ -11,10 +11,16 @@ export function useFestivals() {
         .select('*, category:categories(id, name, emoji, color_hex)')
         .eq('is_active', true)
         .order('festival_date', { ascending: true })
-      if (error) throw error
+      if (error) {
+        console.error('Festivals query failed:', error.message)
+        throw error
+      }
       return data
     },
     staleTime: 5 * 60 * 1000,
+    onError: (error) => {
+      toast.error('Failed to load festivals. Please refresh the page.')
+    },
   })
 }
 
