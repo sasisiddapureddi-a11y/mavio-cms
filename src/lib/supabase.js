@@ -5,28 +5,29 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-const storageBase = `${supabaseUrl}/storage/v1`
+const storageBase = `${supabaseUrl}/storage/v1/object/public`
 
+// Direct public URLs — no image transformation add-on required
 export function getCardImageUrl(path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/render/image/public/content-cards/${path}?width=1080&height=1920&quality=85`
+  return `${storageBase}/content-cards/${path}`
 }
 
 export function getCardThumbUrl(path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/render/image/public/content-cards/${path}?width=405&height=720&quality=70`
+  return `${storageBase}/content-cards/${path}`
 }
 
 export function getBgUrl(path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/render/image/public/background-templates/${path}?width=405&height=720&quality=80`
+  return `${storageBase}/background-templates/${path}`
 }
 
 export function getPublicUrl(bucket, path) {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${storageBase}/object/public/${bucket}/${path}`
+  return `${storageBase}/${bucket}/${path}`
 }

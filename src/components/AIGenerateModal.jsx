@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import { X, Sparkles, RefreshCw } from 'lucide-react'
 
-const STYLES = ['Gradient', 'Nature', 'Abstract', 'Texture']
+const STYLES = [
+  { label: 'Gradient', prompt: 'smooth vibrant gradient background with warm saffron orange and gold tones' },
+  { label: 'Nature', prompt: 'beautiful serene nature landscape with soft bokeh, sunrise or sunset lighting' },
+  { label: 'Abstract', prompt: 'modern abstract geometric art with bold colors and smooth shapes' },
+  { label: 'Texture', prompt: 'elegant textured surface with subtle patterns, marble or silk look' },
+]
+
+function buildPrompt(style, description) {
+  const stylePrompt = STYLES.find(s => s.label === style)?.prompt || style.toLowerCase()
+  return `${stylePrompt}, ${description.trim()}, portrait orientation 9:16 ratio, suitable for text overlay, no text, high quality digital art`
+}
 
 export default function AIGenerateModal({ onClose, onUse }) {
   const [description, setDescription] = useState('')
@@ -19,39 +29,10 @@ export default function AIGenerateModal({ onClose, onUse }) {
     setImageError(false)
 
     try {
-      let imagePrompt = `${style.toLowerCase()} background for Telugu content app card, ${description}, 9:16 portrait, vibrant, suitable for text overlay`
-
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-      if (apiKey) {
-        try {
-          const res = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': apiKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model: 'claude-opus-4-20250514',
-              max_tokens: 200,
-              messages: [{
-                role: 'user',
-                content: `Create a detailed image generation prompt for a ${style.toLowerCase()} background for a Telugu content app card. Description: ${description}. The background must be 9:16 portrait ratio, visually striking, suitable for text overlay. Return only the prompt, nothing else.`,
-              }],
-            }),
-          })
-          if (res.ok) {
-            const data = await res.json()
-            imagePrompt = data.content?.[0]?.text || imagePrompt
-          }
-        } catch {
-          // fall through with default prompt
-        }
-      }
-
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(imagePrompt)}?width=1080&height=1920&nologo=true&seed=${Date.now()}`
+      const prompt = buildPrompt(style, description)
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1080&height=1920&nologo=true&seed=${Date.now()}`
       setGeneratedUrl(url)
-    } catch (err) {
+    } catch {
       setError('Generation failed. Please try again.')
     } finally {
       setGenerating(false)
@@ -82,7 +63,7 @@ export default function AIGenerateModal({ onClose, onUse }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            placeholder='e.g. "orange sunset sky motivational gradient"'
+            placeholder='e.g. "orange sunset sky with golden light"'
             className="w-full px-3 py-3 rounded-xl border border-[#E8E2D9] text-sm focus:outline-none focus:border-[#FF6B00] resize-none"
             style={{ minHeight: 80 }}
           />
@@ -93,18 +74,18 @@ export default function AIGenerateModal({ onClose, onUse }) {
             Style
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {STYLES.map((s) => (
+            {STYLES.map(({ label }) => (
               <button
-                key={s}
+                key={label}
                 type="button"
-                onClick={() => setStyle(s)}
+                onClick={() => setStyle(label)}
                 className={`py-3 rounded-xl text-sm font-medium border-2 transition-all min-h-[48px] ${
-                  style === s
+                  style === label
                     ? 'border-[#FF6B00] bg-[#FFF0E6] text-[#FF6B00]'
                     : 'border-[#E8E2D9] text-[#6B6358]'
                 }`}
               >
-                {s}
+                {label}
               </button>
             ))}
           </div>
@@ -142,8 +123,17 @@ export default function AIGenerateModal({ onClose, onUse }) {
           </div>
         )}
 
-        {(imageError) && (
-          <p className="text-sm text-red-500">Image failed to load. Try generating again.</p>
+        {imageError && (
+          <div className="space-y-2">
+            <p className="text-sm text-red-500">Image failed to load. Try generating again.</p>
+            <button
+              type="button"
+              onClick={generate}
+              className="w-full py-3 rounded-xl border border-[#E8E2D9] text-sm text-[#6B6358] min-h-[48px]"
+            >
+              Try Again
+            </button>
+          </div>
         )}
 
         {error && <p className="text-sm text-red-500">{error}</p>}
