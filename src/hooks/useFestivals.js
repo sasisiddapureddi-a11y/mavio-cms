@@ -13,14 +13,12 @@ export function useFestivals() {
         .order('festival_date', { ascending: true })
       if (error) {
         console.error('Festivals query failed:', error.message)
+        toast.error('Failed to load festivals. Please refresh the page.')
         throw error
       }
       return data
     },
     staleTime: 5 * 60 * 1000,
-    onError: (error) => {
-      toast.error('Failed to load festivals. Please refresh the page.')
-    },
   })
 }
 
@@ -40,7 +38,7 @@ export function useCreateFestival() {
       queryClient.invalidateQueries({ queryKey: ['festivals'] })
       toast.success('Festival created successfully')
     },
-    onError: (err) => {
+    onError: () => {
       toast.error('Failed to create festival')
     },
   })

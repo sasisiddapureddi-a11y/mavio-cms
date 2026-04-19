@@ -163,7 +163,8 @@ export default function CardNew() {
   }
 
   const proceedToMetadata = () => {
-    if (flow === 'upload' && !imageFile) { toast.error('Please upload an image first'); return }
+    if (flow === 'upload' && bulkMode && bulkItems.length === 0) { toast.error('Please upload at least one image'); return }
+    if (flow === 'upload' && !bulkMode && !imageFile) { toast.error('Please upload an image first'); return }
     if (flow === 'build' && !generatedBlob) { toast.error('Please generate the image first'); return }
     setStep(2)
   }

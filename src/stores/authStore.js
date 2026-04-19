@@ -9,13 +9,15 @@ async function fetchCmsUser(userId) {
     .single()
 
   if (error) {
-    // 500 = table missing or RLS misconfigured; PGRST116 = no rows found
-    if (error.code === 'PGRST116') return null          // user not in cms_users
+    if (error.code === 'PGRST116') return null
     console.error('[authStore] cms_users query failed:', error.message, error.code)
     throw new Error('Access denied. Your account is not registered as a CMS user. Contact your administrator.')
   }
   return data
 }
+
+// Module-level guard prevents duplicate subscriptions in React StrictMode
+let authSubscription = null
 
 const useAuthStore = create((set) => ({
   user: null,
@@ -37,7 +39,7 @@ const useAuthStore = create((set) => ({
           await supabase.auth.signOut()
           set({ user: null, cmsUser: null, loading: false })
         }
-      } catch (err) {
+      } catch {
         set({
           user: null,
           cmsUser: null,
@@ -49,7 +51,8 @@ const useAuthStore = create((set) => ({
       set({ user: null, cmsUser: null, loading: false })
     }
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    if (authSubscription) return
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         set({ user: null, cmsUser: null, dbError: null })
       } else if (event === 'SIGNED_IN' && session?.user) {
@@ -61,11 +64,12 @@ const useAuthStore = create((set) => ({
             await supabase.auth.signOut()
             set({ user: null, cmsUser: null })
           }
-        } catch (err) {
+        } catch {
           set({ user: null, cmsUser: null })
         }
       }
     })
+    authSubscription = subscription
   },
 
   signIn: async (email, password) => {

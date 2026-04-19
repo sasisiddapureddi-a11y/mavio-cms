@@ -15,7 +15,7 @@ function daysUntil(dateStr) {
 
 export default function Festivals() {
   const [showForm, setShowForm] = useState(false)
-  const { data: festivals, isLoading } = useFestivals()
+  const { data: festivals, isLoading, isError } = useFestivals()
   const { data: categories } = useCategories()
   const createFestival = useCreateFestival()
   const toggleFestival = useToggleFestival()
@@ -58,6 +58,12 @@ export default function Festivals() {
           Add Festival
         </button>
       </div>
+
+      {isError && (
+        <div className="px-4 py-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          Failed to load festivals. Please refresh the page.
+        </div>
+      )}
 
       {/* Add form */}
       {showForm && (
