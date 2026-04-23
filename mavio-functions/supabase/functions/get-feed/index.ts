@@ -1,9 +1,26 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0"
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") ?? ""
+  const allowed = (Deno.env.get("ALLOWED_ORIGINS") ?? "").trim()
+
+  // If ALLOWED_ORIGINS is not set, default to "*" for simplicity.
+  // If set, allow only listed origins (comma-separated) and echo the matching origin.
+  let allowOrigin = "*"
+  if (allowed.length > 0) {
+    const allowedOrigins = allowed.split(",").map((o) => o.trim()).filter(Boolean)
+    allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] ?? ""
+  }
+
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  }
+
+  if (allowed.length > 0) headers["Vary"] = "Origin"
+  return headers
 }
 
 const CARD_SELECT = `
@@ -17,8 +34,9 @@ const CARD_SELECT = `
 `
 
 serve(async (req: Request) => {
+  const corsHeaders = buildCorsHeaders(req)
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response(null, { status: 204, headers: corsHeaders })
   }
 
   try {
@@ -284,14 +302,22 @@ function respondOk(cards: any[], page: number, limit: number, todayFestival: any
 function formatCard(card: any, todayFestival: any) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
   const imgPath = card.image_url
+  const useTransform = (Deno.env.get("SUPABASE_IMAGE_TRANSFORM") ?? "true") === "true"
+  const base = useTransform
+    ? `${supabaseUrl}/storage/v1/render/image/public/content-cards/`
+    : `${supabaseUrl}/storage/v1/object/public/content-cards/`
   return {
     id: card.id,
     image_url: imgPath?.startsWith("http")
       ? imgPath
-      : `${supabaseUrl}/storage/v1/render/image/public/content-cards/${imgPath}?width=1080&height=1920&quality=85`,
+      : useTransform
+        ? `${base}${imgPath}?width=1080&height=1920&quality=85`
+        : `${base}${imgPath}`,
     thumb_url: imgPath?.startsWith("http")
       ? imgPath
-      : `${supabaseUrl}/storage/v1/render/image/public/content-cards/${imgPath}?width=405&height=720&quality=70`,
+      : useTransform
+        ? `${base}${imgPath}?width=405&height=720&quality=70`
+        : `${base}${imgPath}`,
     category: card.categories,
     language: card.languages,
     festival: card.festivals,

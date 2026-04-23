@@ -1,14 +1,30 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0"
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+function buildCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("Origin") ?? ""
+  const allowed = (Deno.env.get("ALLOWED_ORIGINS") ?? "").trim()
+
+  let allowOrigin = "*"
+  if (allowed.length > 0) {
+    const allowedOrigins = allowed.split(",").map((o) => o.trim()).filter(Boolean)
+    allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] ?? ""
+  }
+
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  }
+
+  if (allowed.length > 0) headers["Vary"] = "Origin"
+  return headers
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req)
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
+    return new Response(null, { status: 204, headers: corsHeaders })
   }
 
   try {
